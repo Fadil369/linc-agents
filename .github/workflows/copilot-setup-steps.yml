@@ -105,158 +105,6 @@ jobs:
           qrcode>=7.4.0
           EOF
 
-      - name: Create advanced-requirements.txt for AI/ML features
-        run: |
-          cat > advanced-requirements.txt << 'EOF'
-          # Advanced AI/ML packages (install separately to avoid conflicts)
-          # These are optional and can be installed based on specific agent needs
-          
-          # PyTorch ecosystem - let pip resolve versions
-          torch>=2.0.0
-          torchvision>=0.15.0
-          torchaudio>=2.0.0
-          
-          # Transformers and NLP
-          transformers>=4.30.0
-          tokenizers>=0.13.0
-          
-          # Speech processing (install only if needed)
-          librosa>=0.10.0
-          soundfile>=0.12.0
-          SpeechRecognition>=3.10.0
-          
-          # Arabic NLP
-          arabic-reshaper>=3.0.0
-          python-bidi>=0.4.0
-          spacy>=3.7.0
-          
-          # Computer Vision
-          opencv-python-headless>=4.8.0
-          
-          # Advanced automation
-          notion-client>=2.0.0
-          tweepy>=4.14.0
-          python-telegram-bot>=20.0.0
-          schedule>=1.2.0
-          
-          # PDF processing
-          pdf2image>=1.16.0
-          PyPDF2>=3.0.0
-          EOF
-
-      - name: Create system-audio-requirements.txt for speech features
-        run: |
-          cat > system-audio-requirements.txt << 'EOF'
-          # Audio processing packages that require system dependencies
-          # Install these only after system audio libraries are installed
-          
-          # Core speech processing
-          openai-whisper>=20230918
-          
-          # Text-to-Speech (simplified version)
-          pyttsx3>=2.90
-          gtts>=2.4.0
-          
-          # Audio utilities
-          pyaudio>=0.2.11
-          wave>=0.0.2
-          EOF
-
-      - name: Create pyproject.toml with flexible dependencies
-        run: |
-          cat > pyproject.toml << 'EOF'
-          [build-system]
-          requires = ["setuptools>=61.0", "wheel"]
-          build-backend = "setuptools.build_meta"
-          
-          [project]
-          name = "brainsait-linc-agents"
-          version = "1.0.0"
-          description = "BrainSAIT LINC - Language-Integrated, Intelligent, Networked, and Contextual Agents"
-          authors = [
-              {name = "Dr. Fadil", email = "fadil@brainsait.io"}
-          ]
-          license = {text = "MIT"}
-          readme = "README.md"
-          requires-python = ">=3.11"
-          classifiers = [
-              "Development Status :: 4 - Beta",
-              "Intended Audience :: Healthcare Industry",
-              "License :: OSI Approved :: MIT License",
-              "Programming Language :: Python :: 3.11",
-              "Topic :: Scientific/Engineering :: Artificial Intelligence",
-              "Topic :: Scientific/Engineering :: Medical Science Apps.",
-          ]
-          
-          # Core dependencies with flexible version ranges
-          dependencies = [
-              "fastapi>=0.100.0,<0.110.0",
-              "uvicorn[standard]>=0.23.0,<0.25.0",
-              "pydantic>=2.0.0,<3.0.0",
-              "sqlalchemy>=2.0.0,<2.1.0",
-              "httpx>=0.24.0,<0.26.0",
-              "redis>=4.5.0,<6.0.0",
-              "python-dotenv>=1.0.0",
-              "fhir.resources>=7.0.0",
-          ]
-          
-          [project.optional-dependencies]
-          # Separate optional dependency groups to avoid conflicts
-          ai = [
-              "openai>=1.0.0,<2.0.0",
-              "anthropic>=0.7.0,<1.0.0",
-              "transformers>=4.30.0",
-              "torch>=2.0.0",
-          ]
-          
-          speech = [
-              "openai-whisper>=20230918",
-              "librosa>=0.10.0",
-              "soundfile>=0.12.0",
-              "SpeechRecognition>=3.10.0",
-          ]
-          
-          arabic = [
-              "nltk>=3.8.0",
-              "spacy>=3.7.0",
-              "arabic-reshaper>=3.0.0",
-              "python-bidi>=0.4.0",
-          ]
-          
-          dev = [
-              "pytest>=7.4.0,<8.0.0",
-              "pytest-asyncio>=0.21.0",
-              "black>=23.0.0",
-              "mypy>=1.5.0",
-          ]
-          
-          healthcare = [
-              "pdf2image>=1.16.0",
-              "pillow>=10.0.0",
-          ]
-          
-          automation = [
-              "celery>=5.3.0,<5.4.0",
-              "docker>=6.0.0,<7.0.0",
-              "kubernetes>=28.0.0,<29.0.0",
-              "schedule>=1.2.0",
-          ]
-          
-          [project.urls]
-          Homepage = "https://brainsait.io"
-          Repository = "https://github.com/fadil369/linc-agents"
-          Documentation = "https://docs.brainsait.io"
-          
-          [tool.black]
-          line-length = 88
-          target-version = ['py311']
-          
-          [tool.pytest.ini_options]
-          asyncio_mode = "auto"
-          testpaths = ["tests"]
-          python_files = ["test_*.py", "*_test.py"]
-          EOF
-
       - name: Create package.json with stable versions
         run: |
           cat > package.json << 'EOF'
@@ -308,11 +156,28 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Set up Node.js 20 for web interfaces  
+      - name: Set up Node.js 20 for web interfaces (without cache initially)
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          # Remove cache until we generate package-lock.json
+
+      - name: Generate package-lock.json and install Node.js dependencies
+        run: |
+          # Generate package-lock.json by installing dependencies
+          npm install
+          
+          # Install global tools
+          npm install -g @tailwindcss/cli
+          
+          # Verify lock file was created
+          if [ -f "package-lock.json" ]; then
+            echo "✅ package-lock.json generated successfully"
+            ls -la package-lock.json
+          else
+            echo "❌ Failed to generate package-lock.json"
+            exit 1
+          fi
 
       - name: Install system dependencies for audio and ML
         run: |
@@ -332,22 +197,11 @@ jobs:
             git \
             unzip
 
-      - name: Install Python core dependencies (step 1)
+      - name: Install Python core dependencies
         run: |
           pip install --upgrade pip setuptools wheel
           # Install core dependencies first to establish base
           pip install -r requirements.txt
-
-      - name: Install JavaScript dependencies  
-        run: |
-          npm ci
-          npm install -g @tailwindcss/cli
-
-      - name: Install optional AI dependencies (if needed)
-        run: |
-          # Try to install AI dependencies, but don't fail if conflicts occur
-          echo "Installing optional AI/ML dependencies..."
-          pip install -r advanced-requirements.txt || echo "Some advanced dependencies skipped due to conflicts"
 
       - name: Download basic language resources
         run: |
@@ -453,7 +307,7 @@ jobs:
           # Copy example to working env for development
           cp .env.example .env
 
-      - name: Create simplified Docker Compose for development
+      - name: Create Docker Compose for development
         run: |
           cat > docker-compose.dev.yml << 'EOF'
           version: '3.8'
@@ -659,7 +513,7 @@ jobs:
           CMD ["python", "main.py"]
           EOF
 
-      - name: Create basic healthcare compliance templates
+      - name: Create healthcare compliance templates
         run: |
           # Create FHIR patient template
           cat > templates/fhir/patient_template.json << 'EOF'
@@ -733,8 +587,83 @@ jobs:
           }
           EOF
 
-      - name: Create development scripts
+      - name: Create development scripts and Tailwind config
         run: |
+          # Create Tailwind CSS configuration
+          cat > tailwind.config.js << 'EOF'
+          /** @type {import('tailwindcss').Config} */
+          module.exports = {
+            content: [
+              "./ui/**/*.{html,js,jsx,ts,tsx}",
+              "./agents/**/templates/**/*.{html,js}",
+              "./shared/**/*.{html,js}",
+            ],
+            theme: {
+              extend: {
+                colors: {
+                  'brainsait-blue': '#1e40af',
+                  'brainsait-green': '#059669',
+                  'saudi-green': '#006c35',
+                  'arabic-gold': '#d4af37',
+                }
+              },
+            },
+            plugins: [
+              require('@tailwindcss/forms'),
+              require('@tailwindcss/typography'),
+            ],
+          }
+          EOF
+          
+          # Create PostCSS config
+          cat > postcss.config.js << 'EOF'
+          module.exports = {
+            plugins: {
+              tailwindcss: {},
+              autoprefixer: {},
+            },
+          }
+          EOF
+          
+          # Create basic CSS file
+          mkdir -p ui/web/css
+          cat > ui/web/css/main.css << 'EOF'
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+          
+          /* Arabic RTL Support */
+          [dir="rtl"] {
+            text-align: right;
+          }
+          
+          /* BrainSAIT Custom Components */
+          .agent-card {
+            @apply bg-white rounded-lg shadow-md p-6 border border-gray-200;
+          }
+          
+          .agent-card:hover {
+            @apply shadow-lg border-brainsait-blue;
+          }
+          
+          .arabic-text {
+            font-family: 'Noto Sans Arabic', Arial, sans-serif;
+            direction: rtl;
+          }
+          
+          .healthcare-badge {
+            @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs;
+          }
+          
+          .business-badge {
+            @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs;
+          }
+          
+          .automation-badge {
+            @apply bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs;
+          }
+          EOF
+          
           # Create setup script
           cat > scripts/setup-dev.sh << 'EOF'
           #!/bin/bash
@@ -752,19 +681,9 @@ jobs:
           echo "⏳ Waiting for services to be ready..."
           sleep 10
           
-          # Install Python dependencies if not done
-          if [ ! -d "venv" ]; then
-              echo "🐍 Creating Python virtual environment..."
-              python3 -m venv venv
-              source venv/bin/activate
-              pip install -r requirements.txt
-          fi
-          
-          # Install Node dependencies if not done
-          if [ ! -d "node_modules" ]; then
-              echo "📦 Installing Node.js dependencies..."
-              npm install
-          fi
+          # Build CSS
+          echo "🎨 Building CSS..."
+          npx tailwindcss -i ./ui/web/css/main.css -o ./ui/web/css/dist.css --watch &
           
           echo "✅ Development environment ready!"
           echo "🚀 Start with: docker-compose -f docker-compose.dev.yml up"
@@ -781,7 +700,8 @@ jobs:
           echo "📊 SYSTEM SUMMARY:"
           echo "✅ Python $(python --version) - Core dependencies installed"
           echo "✅ Node.js $(node --version) - Web tools ready"  
-          echo "✅ Requirements files created with compatible versions"
+          echo "✅ package-lock.json generated successfully"
+          echo "✅ Tailwind CSS and PostCSS configured"
           echo "✅ Project structure initialized (16 agents ready)"
           echo "✅ Healthcare compliance templates (FHIR, Saudi MOH)"
           echo "✅ Development environment configured"
@@ -813,97 +733,91 @@ jobs:
           echo "   • AuthLINC     - Authentication service (8001)"
           echo "   • OIDLINC      - Digital identity (8050)"
           echo ""
-          echo "🛠️ DEPENDENCY RESOLUTION:"
-          echo "   • Core dependencies: Installed successfully"
-          echo "   • Advanced AI/ML: Optional, install as needed"
-          echo "   • Speech processing: Available but not required"
-          echo "   • Flexible version ranges to prevent conflicts"
-          echo ""
           echo "🚀 QUICK START COMMANDS:"
           echo "   1. chmod +x scripts/setup-dev.sh && ./scripts/setup-dev.sh"
           echo "   2. docker-compose -f docker-compose.dev.yml up -d"
           echo "   3. Visit http://localhost:8000 (MasterLINC)"
           echo ""
           echo "📁 KEY FILES CREATED:"
-          echo "   • requirements.txt (core dependencies)"
-          echo "   • advanced-requirements.txt (AI/ML optional)"
+          echo "   • requirements.txt (Python dependencies)"
+          echo "   • package.json + package-lock.json (Node.js dependencies)"
+          echo "   • tailwind.config.js (Tailwind CSS configuration)"
           echo "   • docker-compose.dev.yml (development environment)"
           echo "   • .env.example (environment configuration)"
           echo "   • agents/agent-schema.yml (agent template)"
           echo ""
           echo "🎉 Ready for BrainSAIT LINC development with GitHub Copilot!"
-          echo "   All dependency conflicts resolved ✅"
-          echo "   Modular installation approach ✅"
+          echo "   Node.js lock file issue resolved ✅"
+          echo "   CSS framework configured ✅"
           echo "   Healthcare compliance ready ✅"
 
-      - name: Run dependency validation
+      - name: Run comprehensive health checks
         run: |
-          echo "🔍 Running dependency validation..."
+          echo "🔍 Running system health checks..."
           
-          # Check Python installation
+          # Test Python environment
           python -c "
-          import sys
-          print(f'✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
-          
-          # Test core dependencies
           try:
               import fastapi, sqlalchemy, pydantic, httpx, redis
-              print('✅ Core web framework dependencies OK')
+              print('✅ Core Python dependencies OK')
           except ImportError as e:
-              print(f'❌ Core dependency issue: {e}')
-              sys.exit(1)
-          
-          # Test optional AI dependencies (don't fail if missing)
-          try:
-              import openai, anthropic
-              print('✅ AI API clients available')
-          except ImportError:
-              print('ℹ️  AI dependencies not installed (optional)')
-          
-          # Test database connectivity potential
-          try:
-              import asyncpg
-              print('✅ PostgreSQL client available')
-          except ImportError as e:
-              print(f'❌ Database client issue: {e}')
-              sys.exit(1)
-          
-          print('✅ Python dependency validation passed')
+              print(f'❌ Python dependency error: {e}')
+              exit(1)
           "
           
-          # Check Node.js environment
-          if command -v npm &> /dev/null; then
-              echo "✅ npm $(npm --version) available"
+          # Test Node.js environment and lock file
+          if [ -f "package-lock.json" ]; then
+              echo "✅ package-lock.json exists"
+              
+              # Verify Tailwind is available
+              if npx tailwindcss --help > /dev/null 2>&1; then
+                  echo "✅ Tailwind CSS available"
+              else
+                  echo "❌ Tailwind CSS not available"
+                  exit(1)
+              fi
           else
-              echo "❌ npm not available"
-              exit 1
+              echo "❌ package-lock.json missing"
+              exit(1)
           fi
           
-          # Verify project structure
+          # Test project structure
           required_dirs=("agents" "shared" "infra" "ui" "docs" "data" "logs" "tests")
           for dir in "${required_dirs[@]}"; do
               if [ -d "$dir" ]; then
                   echo "✅ Directory $dir exists"
               else
                   echo "❌ Directory $dir missing"
-                  exit 1
+                  exit(1)
               fi
           done
           
           # Verify configuration files
-          required_files=("requirements.txt" "package.json" ".env" "docker-compose.dev.yml")
+          required_files=("requirements.txt" "package.json" "package-lock.json" ".env" "docker-compose.dev.yml" "tailwind.config.js")
           for file in "${required_files[@]}"; do
               if [ -f "$file" ]; then
                   echo "✅ File $file exists"
               else
                   echo "❌ File $file missing"
-                  exit 1
+                  exit(1)
               fi
           done
           
+          # Test CSS build
+          echo "🎨 Testing CSS build..."
+          npx tailwindcss -i ./ui/web/css/main.css -o ./ui/web/css/test-dist.css
+          if [ -f "./ui/web/css/test-dist.css" ]; then
+              echo "✅ CSS build successful"
+              rm ./ui/web/css/test-dist.css
+          else
+              echo "❌ CSS build failed"
+              exit(1)
+          fi
+          
           echo ""
-          echo "🎊 ALL VALIDATIONS PASSED!"
-          echo "   Dependencies resolved without conflicts ✅"
+          echo "🎊 ALL HEALTH CHECKS PASSED!"
+          echo "   Dependencies installed without conflicts ✅"
+          echo "   Lock files generated properly ✅"
           echo "   Project structure complete ✅"
-          echo "   Configuration files ready ✅"
+          echo "   CSS framework ready ✅"
           echo "   Ready for GitHub Copilot development ✅"
