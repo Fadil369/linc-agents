@@ -90,7 +90,6 @@ jobs:
           
           # Task Queue & Background Jobs
           celery==5.3.4
-          redis==5.0.1
           
           # HTTP Client
           httpx==0.25.2
@@ -124,94 +123,6 @@ jobs:
           qrcode==7.4.2
           pdf2image==1.16.3
           python-dateutil==2.8.2
-          EOF
-
-      - name: Create pyproject.toml for modern Python project management
-        run: |
-          cat > pyproject.toml << 'EOF'
-          [build-system]
-          requires = ["setuptools>=61.0", "wheel"]
-          build-backend = "setuptools.build_meta"
-          
-          [project]
-          name = "brainsait-linc-agents"
-          version = "1.0.0"
-          description = "BrainSAIT LINC - Language-Integrated, Intelligent, Networked, and Contextual Agents"
-          authors = [
-              {name = "Dr. Fadil", email = "fadil@brainsait.io"}
-          ]
-          license = {text = "MIT"}
-          readme = "README.md"
-          requires-python = ">=3.11"
-          classifiers = [
-              "Development Status :: 4 - Beta",
-              "Intended Audience :: Healthcare Industry",
-              "License :: OSI Approved :: MIT License",
-              "Programming Language :: Python :: 3.11",
-              "Topic :: Scientific/Engineering :: Artificial Intelligence",
-              "Topic :: Scientific/Engineering :: Medical Science Apps.",
-          ]
-          
-          dependencies = [
-              "fastapi>=0.104.1",
-              "uvicorn[standard]>=0.24.0",
-              "pydantic>=2.5.0",
-              "sqlalchemy>=2.0.23",
-              "alembic>=1.13.1",
-              "fhir.resources>=7.0.2",
-              "torch>=2.1.1",
-              "transformers>=4.36.0",
-              "openai>=1.3.7",
-              "anthropic>=0.7.7",
-              "openai-whisper>=20231117",
-              "TTS>=0.22.0",
-              "nltk>=3.8.1",
-              "spacy>=3.7.2",
-              "redis>=5.0.1",
-              "httpx>=0.25.2",
-              "python-dotenv>=1.0.0",
-          ]
-          
-          [project.optional-dependencies]
-          dev = [
-              "pytest>=7.4.3",
-              "pytest-asyncio>=0.21.1",
-              "black>=23.11.0",
-              "flake8>=6.1.0",
-              "mypy>=1.7.1",
-          ]
-          
-          healthcare = [
-              "hl7apy>=1.3.4",
-              "pdf2image>=1.16.3",
-          ]
-          
-          automation = [
-              "celery>=5.3.4",
-              "docker>=6.1.3",
-              "kubernetes>=28.1.0",
-              "schedule>=1.2.0",
-          ]
-          
-          [project.urls]
-          Homepage = "https://brainsait.io"
-          Repository = "https://github.com/fadil369/linc-agents"
-          Documentation = "https://docs.brainsait.io"
-          
-          [tool.black]
-          line-length = 88
-          target-version = ['py311']
-          
-          [tool.mypy]
-          python_version = "3.11"
-          warn_return_any = true
-          warn_unused_configs = true
-          disallow_untyped_defs = true
-          
-          [tool.pytest.ini_options]
-          asyncio_mode = "auto"
-          testpaths = ["tests"]
-          python_files = ["test_*.py", "*_test.py"]
           EOF
 
       - name: Create package.json for Node.js dependencies
@@ -265,15 +176,27 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          # Now we can use cache since requirements.txt exists
-          cache: "pip"
+          # Remove cache initially since requirements.txt is generated in workflow
 
-      - name: Set up Node.js 20 for web interfaces  
+      - name: Set up Node.js 20 for web interfaces
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          # Now we can use cache since package.json exists
-          cache: "npm"
+          # Remove cache initially since package.json is generated in workflow
+
+      - name: Generate npm lock file and install dependencies
+        run: |
+          # Install Node.js dependencies and generate package-lock.json
+          npm install
+          
+          # Verify lock file was created
+          if [ -f "package-lock.json" ]; then
+            echo "✅ package-lock.json generated successfully"
+            ls -la package-lock.json
+          else
+            echo "❌ Failed to generate package-lock.json"
+            exit 1
+          fi
 
       - name: Install system dependencies for AI/ML and Arabic processing
         run: |
@@ -311,58 +234,69 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
 
-      - name: Install JavaScript dependencies  
+      - name: Install additional JavaScript tools globally
         run: |
-          npm ci
           npm install -g @tailwindcss/cli
 
       - name: Download Arabic language models and data
         run: |
-          python -c "import nltk; nltk.download('punkt', quiet=True)"
-          python -c "import nltk; nltk.download('stopwords', quiet=True)"
+          python -c "import nltk; nltk.download('punkt', quiet=True)" || echo "NLTK punkt download failed"
+          python -c "import nltk; nltk.download('stopwords', quiet=True)" || echo "NLTK stopwords download failed"
+          
           # Create models directory
           mkdir -p ./models/arabic
           
           # Download Arabic NLP resources (fallback gracefully if unavailable)
           wget -O ./models/arabic/ar_lexicon.txt \
             https://raw.githubusercontent.com/CAMeL-Lab/camel_tools/master/camel_tools/data/lexicons/msa_lexicon.txt \
-            || echo "Arabic lexicon download failed - will use fallback"
+            || echo "⚠️  Arabic lexicon download failed - will use fallback during runtime"
 
       - name: Set up project structure and configuration
         run: |
-          # Create agent directories
-          mkdir -p agents/{masterlinc,authlinc,doctorlinc,nurslinc,patientlinc,bizlinc,paylinc,insightlinc,devlinc,autolinc,codelinc,medialinc,edulinc,chatlinc,oidlinc,careteamlinc}
+          echo "📁 Creating BrainSAIT LINC project structure..."
+          
+          # Create agent directories for all 16 agents
+          mkdir -p agents/{masterlinc,authlinc,doctorlinc,nurslinc,patientlinc,careteamlinc}
+          mkdir -p agents/{bizlinc,paylinc,insightlinc,oidlinc}
+          mkdir -p agents/{devlinc,autolinc,codelinc}
+          mkdir -p agents/{medialinc,edulinc,chatlinc}
           
           # Create shared components
-          mkdir -p shared/{auth,database,messaging,monitoring,models,utils}
+          mkdir -p shared/{auth,database,messaging,monitoring,models,utils,config}
           
           # Create infrastructure
-          mkdir -p infra/{docker,kubernetes,cloudflare,scripts}
+          mkdir -p infra/{docker,kubernetes,cloudflare,scripts,terraform}
           
           # Create UI directories
-          mkdir -p ui/{web,mobile,desktop,components}
+          mkdir -p ui/{web,mobile,desktop,components,assets}
           
           # Create documentation
-          mkdir -p docs/{api,deployment,user-guides,agents}
+          mkdir -p docs/{api,deployment,user-guides,agents,architecture}
           
           # Create data directories
-          mkdir -p data/{temp,uploads,exports,models}
+          mkdir -p data/{temp,uploads,exports,models,backups}
           
           # Create logs
-          mkdir -p logs/{agents,system,audit}
+          mkdir -p logs/{agents,system,audit,performance}
           
           # Create tests
-          mkdir -p tests/{unit,integration,agents}
+          mkdir -p tests/{unit,integration,agents,e2e}
+          
+          # Create configuration directories
+          mkdir -p config/{environments,agents,services}
+          
+          echo "✅ Project structure created with $(find . -type d | wc -l) directories"
 
-      - name: Create environment configuration
+      - name: Create environment configuration files
         run: |
+          # Main environment configuration
           cat > .env.example << 'EOF'
           # Environment
           ENVIRONMENT=development
           DEBUG=true
           LOG_LEVEL=INFO
           
-          # Database
+          # Database Configuration
           DATABASE_URL=postgresql://postgres:brainsait_test@localhost:5432/brainsait_agents
           REDIS_URL=redis://localhost:6379/0
           
@@ -371,37 +305,110 @@ jobs:
           ANTHROPIC_API_KEY=your_anthropic_key_here
           CLOUDFLARE_API_TOKEN=your_cloudflare_token_here
           
-          # Healthcare APIs
+          # Healthcare Integration
           FHIR_BASE_URL=https://fhir.brainsait.io
           NPHIES_BASE_URL=https://nphies.sa
+          SAUDI_MOH_API_URL=https://api.moh.gov.sa
           
-          # Agent Configuration
+          # Agent Ports (8000-8099 range)
           MASTER_LINC_PORT=8000
-          DOCTOR_LINC_PORT=8001
-          NURSE_LINC_PORT=8002
-          PATIENT_LINC_PORT=8003
+          AUTH_LINC_PORT=8001
+          DOCTOR_LINC_PORT=8010
+          NURSE_LINC_PORT=8011
+          PATIENT_LINC_PORT=8012
+          CARETEAM_LINC_PORT=8013
+          BIZ_LINC_PORT=8020
+          PAY_LINC_PORT=8021
+          INSIGHT_LINC_PORT=8022
+          OID_LINC_PORT=8023
+          DEV_LINC_PORT=8030
+          AUTO_LINC_PORT=8031
+          CODE_LINC_PORT=8032
+          MEDIA_LINC_PORT=8040
+          EDU_LINC_PORT=8041
+          CHAT_LINC_PORT=8042
           
           # Security
-          JWT_SECRET=your_jwt_secret_here
-          ENCRYPTION_KEY=your_encryption_key_here
+          JWT_SECRET=your_jwt_secret_here_min_32_chars
+          ENCRYPTION_KEY=your_encryption_key_here_32_bytes
+          SESSION_SECRET=your_session_secret_here
           
           # Storage
           UPLOAD_PATH=./data/uploads
           MODEL_PATH=./models
+          BACKUP_PATH=./data/backups
+          
+          # External Services
+          APPLE_TEAM_ID=your_apple_team_id
+          WHATSAPP_BUSINESS_API_KEY=your_whatsapp_key
+          TELEGRAM_BOT_TOKEN=your_telegram_token
+          
+          # Monitoring
+          SENTRY_DSN=your_sentry_dsn
+          PROMETHEUS_PORT=9090
+          GRAFANA_PORT=3000
           EOF
           
           # Copy example to working env for development
           cp .env.example .env
+          
+          # Create agent-specific config template
+          cat > config/agents/agent-config.template.yml << 'EOF'
+          # BrainSAIT LINC Agent Configuration Template
+          agent:
+            id: "AGENT_ID"
+            name: "AGENT_NAME"
+            version: "1.0.0"
+            category: "healthcare" # healthcare, business, automation, content
+            
+          metadata:
+            description: "Agent description"
+            author: "BrainSAIT Team"
+            created: "2025-01-01"
+            languages: ["ar", "en"]
+            
+          capabilities:
+            nlp:
+              speech_to_text: true
+              text_to_speech: true
+              multilingual: true
+              arabic_support: true
+            
+            integrations:
+              fhir: false
+              apple_health: false
+              whatsapp: false
+              telegram: false
+              
+          deployment:
+            subdomain: "AGENT_ID.brainsait.io"
+            port: 8000
+            health_endpoint: "/health"
+            metrics_endpoint: "/metrics"
+            
+          resources:
+            memory_limit: "512Mi"
+            cpu_limit: "500m"
+            storage: "1Gi"
+            
+          monitoring:
+            logging_level: "INFO"
+            metrics_enabled: true
+            tracing_enabled: true
+            health_checks: true
+          EOF
 
-      - name: Create Docker Compose for development
+      - name: Create Docker infrastructure templates
         run: |
+          # Main Docker Compose for development
           cat > docker-compose.dev.yml << 'EOF'
           version: '3.8'
           
           services:
-            # Core Services
+            # Core Infrastructure
             postgres:
               image: postgres:15-alpine
+              container_name: brainsait_postgres
               environment:
                 POSTGRES_DB: brainsait_agents
                 POSTGRES_USER: postgres
@@ -410,35 +417,73 @@ jobs:
                 - "5432:5432"
               volumes:
                 - postgres_data:/var/lib/postgresql/data
+                - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
               healthcheck:
                 test: ["CMD-SHELL", "pg_isready -U postgres"]
                 interval: 10s
                 timeout: 5s
                 retries: 5
+              networks:
+                - brainsait_network
             
             redis:
               image: redis:7-alpine
+              container_name: brainsait_redis
               ports:
                 - "6379:6379"
               volumes:
                 - redis_data:/data
+                - ./infra/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+              command: redis-server /usr/local/etc/redis/redis.conf
               healthcheck:
                 test: ["CMD", "redis-cli", "ping"]
                 interval: 10s
                 timeout: 5s
                 retries: 5
+              networks:
+                - brainsait_network
+            
+            # Message Queue
+            rabbitmq:
+              image: rabbitmq:3-management-alpine
+              container_name: brainsait_rabbitmq
+              environment:
+                RABBITMQ_DEFAULT_USER: brainsait
+                RABBITMQ_DEFAULT_PASS: brainsait_test
+              ports:
+                - "5672:5672"
+                - "15672:15672"
+              volumes:
+                - rabbitmq_data:/var/lib/rabbitmq
+              networks:
+                - brainsait_network
+            
+            # Monitoring
+            prometheus:
+              image: prom/prometheus:latest
+              container_name: brainsait_prometheus
+              ports:
+                - "9090:9090"
+              volumes:
+                - ./infra/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+                - prometheus_data:/prometheus
+              networks:
+                - brainsait_network
             
             # Master Orchestration Agent
             masterlinc:
               build: 
                 context: ./agents/masterlinc
                 dockerfile: Dockerfile
+              container_name: brainsait_masterlinc
               ports:
                 - "8000:8000"
               environment:
                 - DATABASE_URL=postgresql://postgres:brainsait_test@postgres:5432/brainsait_agents
                 - REDIS_URL=redis://redis:6379/0
+                - RABBITMQ_URL=amqp://brainsait:brainsait_test@rabbitmq:5672/
                 - ENVIRONMENT=development
+                - LOG_LEVEL=INFO
               depends_on:
                 postgres:
                   condition: service_healthy
@@ -448,10 +493,15 @@ jobs:
                 - ./agents/masterlinc:/app
                 - ./shared:/app/shared
                 - ./data:/app/data
+                - ./logs:/app/logs
+              networks:
+                - brainsait_network
+              restart: unless-stopped
             
-            # Healthcare Agents
-            doctorlinc:
-              build: ./agents/doctorlinc
+            # Authentication Agent
+            authlinc:
+              build: ./agents/authlinc
+              container_name: brainsait_authlinc
               ports:
                 - "8001:8001"
               environment:
@@ -460,113 +510,104 @@ jobs:
                 - MASTER_LINC_URL=http://masterlinc:8000
               depends_on:
                 - masterlinc
+              networks:
+                - brainsait_network
+              restart: unless-stopped
             
-            nurslinc:
-              build: ./agents/nurslinc
+            # Healthcare Agents
+            doctorlinc:
+              build: ./agents/doctorlinc
+              container_name: brainsait_doctorlinc
               ports:
-                - "8002:8002"
+                - "8010:8010"
               environment:
                 - DATABASE_URL=postgresql://postgres:brainsait_test@postgres:5432/brainsait_agents
                 - REDIS_URL=redis://redis:6379/2
                 - MASTER_LINC_URL=http://masterlinc:8000
+                - AUTH_LINC_URL=http://authlinc:8001
               depends_on:
                 - masterlinc
+                - authlinc
+              volumes:
+                - ./models:/app/models
+              networks:
+                - brainsait_network
+              restart: unless-stopped
           
           volumes:
             postgres_data:
+              driver: local
             redis_data:
+              driver: local
+            rabbitmq_data:
+              driver: local
+            prometheus_data:
+              driver: local
           
           networks:
-            default:
+            brainsait_network:
+              driver: bridge
               name: brainsait_network
           EOF
-
-      - name: Create base agent templates
-        run: |
-          # Create agent configuration schema
-          cat > agents/agent-schema.yml << 'EOF'
-          # BrainSAIT LINC Agent Configuration Schema
-          agent_id: "template"
-          category: "healthcare"  # healthcare, business, automation, content
-          version: "1.0.0"
           
-          metadata:
-            name: "Template LINC Agent"
-            description: "Base template for all LINC agents"
-            author: "BrainSAIT Team"
-            languages: ["ar", "en"]
-            
-          capabilities:
-            speech_to_text: true
-            text_to_speech: true
-            multilingual: true
-            fhir_integration: false
-            
-          apis:
-            endpoints:
-              - "/health"
-              - "/chat"
-              - "/process"
-            
-          deployment:
-            subdomain: "template.brainsait.io"
-            port: 8000
-            health_check: "/health"
-            docker_image: "brainsait/template-linc"
-            
-          dependencies:
-            internal: []
-            external: ["openai", "anthropic"]
-            
-          monitoring:
-            metrics_enabled: true
-            logging_level: "INFO"
-            health_checks: true
-          EOF
-          
-          # Create base Dockerfile template
+          # Create individual agent Dockerfile template
           cat > agents/Dockerfile.template << 'EOF'
           FROM python:3.11-slim
           
+          # Set working directory
           WORKDIR /app
           
           # Install system dependencies
           RUN apt-get update && apt-get install -y \
               build-essential \
               curl \
+              ffmpeg \
+              libsndfile1 \
+              portaudio19-dev \
               && rm -rf /var/lib/apt/lists/*
           
           # Copy requirements and install Python dependencies
           COPY requirements.txt .
-          RUN pip install --no-cache-dir -r requirements.txt
+          RUN pip install --no-cache-dir --upgrade pip && \
+              pip install --no-cache-dir -r requirements.txt
           
-          # Copy application code
+          # Copy shared modules
+          COPY ../shared ./shared
+          
+          # Copy agent-specific code
           COPY . .
           
-          # Create non-root user
-          RUN useradd -m -u 1000 agent && chown -R agent:agent /app
+          # Create non-root user for security
+          RUN useradd -m -u 1000 agent && \
+              chown -R agent:agent /app && \
+              mkdir -p /app/logs /app/data && \
+              chown -R agent:agent /app/logs /app/data
+          
           USER agent
           
           # Health check
-          HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+          HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
               CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
           
+          # Expose port (will be overridden by specific agents)
           EXPOSE ${PORT:-8000}
           
+          # Default command (will be overridden by specific agents)
           CMD ["python", "main.py"]
           EOF
 
-      - name: Initialize healthcare compliance templates
+      - name: Create healthcare compliance and FHIR templates
         run: |
           mkdir -p templates/{fhir,nphies,saudi-moh}
           
-          # FHIR Patient template
-          cat > templates/fhir/patient_template.json << 'EOF'
+          # Enhanced FHIR Patient template with Saudi compliance
+          cat > templates/fhir/saudi_patient_template.json << 'EOF'
           {
             "resourceType": "Patient",
             "id": "saudi-patient-template",
             "meta": {
-              "profile": ["http://brainsait.io/fhir/StructureDefinition/SaudiPatient"]
+              "profile": ["http://brainsait.io/fhir/StructureDefinition/SaudiPatient"],
+              "lastUpdated": "2025-01-01T00:00:00Z"
             },
             "language": "ar-SA",
             "extension": [
@@ -576,6 +617,16 @@ jobs:
                   "system": "http://moh.gov.sa/nationalid",
                   "value": "TEMPLATE_NATIONAL_ID"
                 }
+              },
+              {
+                "url": "http://brainsait.io/fhir/StructureDefinition/patient-religion",
+                "valueCodeableConcept": {
+                  "coding": [{
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-ReligiousAffiliation",
+                    "code": "1013",
+                    "display": "Muslim"
+                  }]
+                }
               }
             ],
             "identifier": [
@@ -583,263 +634,389 @@ jobs:
                 "type": {
                   "coding": [{
                     "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
-                    "code": "NI"
+                    "code": "NI",
+                    "display": "National identifier"
                   }]
                 },
                 "system": "http://moh.gov.sa/nationalid",
                 "value": "TEMPLATE_NATIONAL_ID"
               }
             ],
+            "active": true,
             "name": [
               {
                 "use": "official",
-                "family": "TEMPLATE_FAMILY_NAME",
-                "given": ["TEMPLATE_GIVEN_NAME"]
+                "family": "TEMPLATE_FAMILY_NAME_AR",
+                "given": ["TEMPLATE_GIVEN_NAME_AR"],
+                "extension": [
+                  {
+                    "url": "http://hl7.org/fhir/StructureDefinition/humanname-fathers-family",
+                    "valueString": "TEMPLATE_FATHER_NAME_AR"
+                  },
+                  {
+                    "url": "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family", 
+                    "valueString": "TEMPLATE_MOTHER_NAME_AR"
+                  }
+                ]
+              },
+              {
+                "use": "official",
+                "family": "TEMPLATE_FAMILY_NAME_EN",
+                "given": ["TEMPLATE_GIVEN_NAME_EN"]
               }
             ],
             "telecom": [
               {
                 "system": "phone",
-                "value": "TEMPLATE_PHONE",
-                "use": "mobile"
+                "value": "+966XXXXXXXXX",
+                "use": "mobile",
+                "rank": 1
+              },
+              {
+                "system": "email",
+                "value": "patient@example.com",
+                "use": "home"
               }
             ],
             "gender": "unknown",
-            "birthDate": "TEMPLATE_BIRTH_DATE",
+            "birthDate": "YYYY-MM-DD",
             "address": [
               {
                 "use": "home",
-                "country": "SA",
-                "city": "TEMPLATE_CITY"
+                "type": "both",
+                "line": ["TEMPLATE_ADDRESS_LINE"],
+                "city": "TEMPLATE_CITY",
+                "district": "TEMPLATE_DISTRICT",
+                "state": "TEMPLATE_REGION",
+                "postalCode": "TEMPLATE_POSTAL_CODE",
+                "country": "SA"
               }
             ],
+            "maritalStatus": {
+              "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+                "code": "UNK",
+                "display": "Unknown"
+              }]
+            },
             "communication": [
               {
                 "language": {
                   "coding": [{
                     "system": "urn:ietf:bcp:47",
-                    "code": "ar-SA"
+                    "code": "ar-SA",
+                    "display": "Arabic (Saudi Arabia)"
                   }]
                 },
                 "preferred": true
+              },
+              {
+                "language": {
+                  "coding": [{
+                    "system": "urn:ietf:bcp:47", 
+                    "code": "en-US",
+                    "display": "English (United States)"
+                  }]
+                },
+                "preferred": false
               }
             ]
           }
           EOF
           
           # Saudi MOH compliance checklist
-          cat > templates/saudi-moh/compliance_checklist.yml << 'EOF'
+          cat > templates/saudi-moh/compliance_requirements.yml << 'EOF'
           saudi_moh_compliance:
-            data_residency:
-              - patient_data_stored_in_saudi: true
-              - backup_data_location: "Saudi Arabia"
-              - cloud_provider_compliance: "CITC approved"
+            data_governance:
+              data_residency:
+                requirement: "Patient data must be stored within Saudi Arabia"
+                implementation: "All databases hosted in Saudi data centers"
+                verification: "Regular audits of data location"
+              
+              data_classification:
+                personal_health_info: "Highest security level"
+                administrative_data: "Medium security level"
+                public_health_data: "Standard security level"
             
-            privacy_security:
-              - encryption_at_rest: "AES-256"
-              - encryption_in_transit: "TLS 1.3"
-              - access_controls: "RBAC with MFA"
-              - audit_logging: "comprehensive"
+            security_requirements:
+              encryption:
+                at_rest: "AES-256"
+                in_transit: "TLS 1.3 or higher"
+                key_management: "Hardware Security Module (HSM)"
+              
+              access_controls:
+                authentication: "Multi-factor authentication required"
+                authorization: "Role-based access control (RBAC)"
+                audit_logging: "Comprehensive access logging"
+                session_management: "Secure session handling"
             
             interoperability:
-              - fhir_r4_compliance: true
-              - hl7_support: true
-              - nphies_integration: true
-              - saudi_terminology_support: true
+              standards:
+                fhir_version: "R4 or higher"
+                hl7_support: "Required for message exchange"
+                terminology: "SNOMED CT Arabic edition"
+                coding_systems: "ICD-10-AM, CPT, Saudi-specific codes"
+              
+              apis:
+                nphies_integration: "Mandatory for insurance claims"
+                moh_systems: "Integration with national health systems"
+                data_exchange: "Secure API endpoints"
             
             localization:
-              - arabic_language_support: true
-              - gregorian_hijri_calendar: true
-              - saudi_national_id_format: true
-              - local_phone_number_format: true
+              language_support:
+                primary: "Arabic (Saudi dialect)"
+                secondary: "English"
+                ui_rtl: "Right-to-left text support"
+              
+              cultural_considerations:
+                calendar_system: "Both Gregorian and Hijri calendars"
+                prayer_times: "Integration with Islamic prayer schedule"
+                gender_segregation: "Respect for cultural preferences"
+              
+              regulatory_compliance:
+                licensing: "MOH healthcare software license"
+                data_protection: "Saudi Personal Data Protection Law"
+                medical_device: "SFDA approval if applicable"
+          
+            audit_requirements:
+              logging:
+                user_actions: "All user interactions logged"
+                data_access: "Complete audit trail"
+                system_events: "Technical event logging"
+                retention_period: "7 years minimum"
+              
+              reporting:
+                compliance_reports: "Monthly compliance status"
+                security_incidents: "Immediate reporting to authorities"
+                performance_metrics: "System performance tracking"
           EOF
 
-      - name: Create Cloudflare deployment scripts
+      - name: Create Cloudflare deployment infrastructure
         run: |
-          mkdir -p infra/cloudflare/scripts
+          mkdir -p infra/cloudflare/{tunnels,dns,workers}
           
-          cat > infra/cloudflare/scripts/setup-tunnels.sh << 'EOF'
+          # Enhanced Cloudflare Tunnels setup script
+          cat > infra/cloudflare/setup-tunnels.sh << 'EOF'
           #!/bin/bash
           
-          # BrainSAIT LINC Cloudflare Tunnels Setup
-          
+          # BrainSAIT LINC Cloudflare Tunnels Setup Script
           set -e
           
-          echo "🌐 Setting up Cloudflare Tunnels for BrainSAIT LINC Agents"
+          echo "🌐 BrainSAIT LINC - Cloudflare Tunnels Setup"
+          echo "============================================"
+          
+          # Configuration
+          TUNNEL_NAME="brainsait-linc"
+          TUNNEL_CONFIG_FILE="tunnel-config.yml"
+          
+          # Colors for output
+          RED='\033[0;31m'
+          GREEN='\033[0;32m'
+          YELLOW='\033[1;33m'
+          BLUE='\033[0;34m'
+          NC='\033[0m' # No Color
+          
+          echo_status() {
+              echo -e "${BLUE}[INFO]${NC} $1"
+          }
+          
+          echo_success() {
+              echo -e "${GREEN}[SUCCESS]${NC} $1"
+          }
+          
+          echo_warning() {
+              echo -e "${YELLOW}[WARNING]${NC} $1"
+          }
+          
+          echo_error() {
+              echo -e "${RED}[ERROR]${NC} $1"
+          }
           
           # Check if cloudflared is installed
           if ! command -v cloudflared &> /dev/null; then
-              echo "Installing cloudflared..."
-              # Download and install cloudflared
-              wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-              sudo dpkg -i cloudflared-linux-amd64.deb
-              rm cloudflared-linux-amd64.deb
+              echo_status "Installing cloudflared..."
+              
+              # Detect OS and install accordingly
+              if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                  # Linux
+                  wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+                  sudo dpkg -i cloudflared-linux-amd64.deb
+                  rm cloudflared-linux-amd64.deb
+              elif [[ "$OSTYPE" == "darwin"* ]]; then
+                  # macOS
+                  if command -v brew &> /dev/null; then
+                      brew install cloudflared
+                  else
+                      echo_error "Please install Homebrew first or download cloudflared manually"
+                      exit 1
+                  fi
+              else
+                  echo_error "Unsupported operating system: $OSTYPE"
+                  exit 1
+              fi
+              
+              echo_success "cloudflared installed successfully"
+          else
+              echo_success "cloudflared is already installed"
           fi
           
           # Create tunnel configuration
-          cat > tunnel-config.yml << 'TUNNEL_EOF'
-          tunnel: BRAINSAIT_TUNNEL_ID
-          credentials-file: /root/.cloudflared/BRAINSAIT_TUNNEL_ID.json
+          echo_status "Creating tunnel configuration..."
           
+          cat > $TUNNEL_CONFIG_FILE << 'TUNNEL_EOF'
+          # BrainSAIT LINC Agents Tunnel Configuration
+          tunnel: TUNNEL_ID_PLACEHOLDER
+          credentials-file: /etc/cloudflared/TUNNEL_ID_PLACEHOLDER.json
+          
+          # Logging
+          loglevel: info
+          
+          # Ingress rules for all BrainSAIT LINC agents
           ingress:
-            # Healthcare Agents
+            # Core Infrastructure
             - hostname: master.brainsait.io
               service: http://localhost:8000
-            - hostname: doctor.brainsait.io
+              originRequest:
+                httpHostHeader: master.brainsait.io
+            
+            - hostname: auth.brainsait.io
               service: http://localhost:8001
+              originRequest:
+                httpHostHeader: auth.brainsait.io
+            
+            # Healthcare Agents
+            - hostname: doctor.brainsait.io
+              service: http://localhost:8010
+              originRequest:
+                httpHostHeader: doctor.brainsait.io
+            
             - hostname: nurse.brainsait.io
-              service: http://localhost:8002
+              service: http://localhost:8011
+              originRequest:
+                httpHostHeader: nurse.brainsait.io
+            
             - hostname: patient.brainsait.io
-              service: http://localhost:8003
+              service: http://localhost:8012
+              originRequest:
+                httpHostHeader: patient.brainsait.io
+            
+            - hostname: careteam.brainsait.io
+              service: http://localhost:8013
+              originRequest:
+                httpHostHeader: careteam.brainsait.io
             
             # Business Agents
             - hostname: biz.brainsait.io
-              service: http://localhost:8010
-            - hostname: pay.brainsait.io
-              service: http://localhost:8011
-            - hostname: insight.brainsait.io
-              service: http://localhost:8012
-            
-            # Development Agents
-            - hostname: dev.brainsait.io
               service: http://localhost:8020
-            - hostname: auto.brainsait.io
+              originRequest:
+                httpHostHeader: biz.brainsait.io
+            
+            - hostname: pay.brainsait.io
               service: http://localhost:8021
-            - hostname: code.brainsait.io
+              originRequest:
+                httpHostHeader: pay.brainsait.io
+            
+            - hostname: insight.brainsait.io
               service: http://localhost:8022
+              originRequest:
+                httpHostHeader: insight.brainsait.io
             
-            # Content Agents
-            - hostname: media.brainsait.io
-              service: http://localhost:8030
-            - hostname: edu.brainsait.io
-              service: http://localhost:8031
-            - hostname: chat.brainsait.io
-              service: http://localhost:8032
-            
-            # Identity & Security
-            - hostname: auth.brainsait.io
-              service: http://localhost:8040
             - hostname: oid.brainsait.io
-              service: http://localhost:8041
+              service: http://localhost:8023
+              originRequest:
+                httpHostHeader: oid.brainsait.io
             
-            # Catch-all
+            # Development & Automation Agents
+            - hostname: dev.brainsait.io
+              service: http://localhost:8030
+              originRequest:
+                httpHostHeader: dev.brainsait.io
+            
+            - hostname: auto.brainsait.io
+              service: http://localhost:8031
+              originRequest:
+                httpHostHeader: auto.brainsait.io
+            
+            - hostname: code.brainsait.io
+              service: http://localhost:8032
+              originRequest:
+                httpHostHeader: code.brainsait.io
+            
+            # Content & Communication Agents
+            - hostname: media.brainsait.io
+              service: http://localhost:8040
+              originRequest:
+                httpHostHeader: media.brainsait.io
+            
+            - hostname: edu.brainsait.io
+              service: http://localhost:8041
+              originRequest:
+                httpHostHeader: edu.brainsait.io
+            
+            - hostname: chat.brainsait.io
+              service: http://localhost:8042
+              originRequest:
+                httpHostHeader: chat.brainsait.io
+            
+            # Main website and documentation
+            - hostname: brainsait.io
+              service: http://localhost:3000
+              originRequest:
+                httpHostHeader: brainsait.io
+            
+            - hostname: www.brainsait.io
+              service: http://localhost:3000
+              originRequest:
+                httpHostHeader: www.brainsait.io
+            
+            # API Gateway
+            - hostname: api.brainsait.io
+              service: http://localhost:8080
+              originRequest:
+                httpHostHeader: api.brainsait.io
+            
+            # Monitoring and Admin
+            - hostname: monitor.brainsait.io
+              service: http://localhost:9090
+              originRequest:
+                httpHostHeader: monitor.brainsait.io
+            
+            # Catch-all rule (must be last)
             - service: http_status:404
           TUNNEL_EOF
           
-          echo "✅ Tunnel configuration created"
-          echo "📝 Next steps:"
-          echo "   1. Create tunnel: cloudflared tunnel create brainsait-linc"
-          echo "   2. Update tunnel-config.yml with your tunnel ID"
-          echo "   3. Configure DNS records in Cloudflare dashboard"
-          echo "   4. Run tunnel: cloudflared tunnel run brainsait-linc"
+          echo_success "Tunnel configuration created: $TUNNEL_CONFIG_FILE"
+          
+          echo ""
+          echo "🚀 Next Steps:"
+          echo "=============="
+          echo "1. Login to Cloudflare:"
+          echo "   cloudflared tunnel login"
+          echo ""
+          echo "2. Create the tunnel:"
+          echo "   cloudflared tunnel create $TUNNEL_NAME"
+          echo ""
+          echo "3. Update tunnel-config.yml with your tunnel ID"
+          echo ""
+          echo "4. Configure DNS records:"
+          echo "   cloudflared tunnel route dns $TUNNEL_NAME master.brainsait.io"
+          echo "   cloudflared tunnel route dns $TUNNEL_NAME doctor.brainsait.io"
+          echo "   # ... (repeat for all subdomains)"
+          echo ""
+          echo "5. Run the tunnel:"
+          echo "   cloudflared tunnel --config $TUNNEL_CONFIG_FILE run $TUNNEL_NAME"
+          echo ""
+          echo "📚 Documentation: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/"
+          echo "🎯 All 16 agents will be accessible via their respective subdomains"
           EOF
           
-          chmod +x infra/cloudflare/scripts/setup-tunnels.sh
-
-      - name: Validate setup and create summary
-        run: |
-          echo "🧠 BrainSAIT LINC Ecosystem Setup Complete!"
-          echo "================================================================"
-          echo ""
-          echo "📊 SYSTEM SUMMARY:"
-          echo "✅ Python $(python --version) with healthcare dependencies"
-          echo "✅ Node.js $(node --version) with modern web tools"  
-          echo "✅ Docker $(docker --version) for containerization"
-          echo "✅ Requirements files created and dependencies installed"
-          echo "✅ Project structure initialized (16 agents + infrastructure)"
-          echo "✅ Healthcare compliance templates (FHIR, Saudi MOH)"
-          echo "✅ Development environment configuration"
-          echo "✅ Cloudflare deployment scripts"
-          echo ""
-          echo "🏥 HEALTHCARE AGENTS READY:"
-          echo "   • MasterLINC (Orchestration)"
-          echo "   • DoctorLINC (Clinical Support)"  
-          echo "   • NurseLINC (Nursing Workflows)"
-          echo "   • PatientLINC (Patient Experience)"
-          echo "   • CareTeamLINC (Care Coordination)"
-          echo ""
-          echo "💼 BUSINESS AGENTS READY:"
-          echo "   • BizLINC (Healthcare Business)"
-          echo "   • PayLINC (Payment Processing)"
-          echo "   • InsightLINC (Analytics)"
-          echo ""
-          echo "🤖 AUTOMATION AGENTS READY:"
-          echo "   • DevLINC (DevOps)"
-          echo "   • AutoLINC (Workflow Orchestration)"
-          echo "   • CodeLINC (Development Assistant)"
-          echo ""
-          echo "📚 CONTENT AGENTS READY:"
-          echo "   • MediaLINC (Multimedia Processing)"
-          echo "   • EduLINC (Learning Management)"
-          echo "   • ChatLINC (Multilingual Communication)"
-          echo ""
-          echo "🔐 SECURITY AGENTS READY:"
-          echo "   • AuthLINC (Authentication)"
-          echo "   • OIDLINC (Digital Identity)"
-          echo ""
-          echo "🚀 QUICK START:"
-          echo "   1. docker-compose -f docker-compose.dev.yml up -d"
-          echo "   2. Visit http://localhost:8000 (MasterLINC)"
-          echo "   3. ./infra/cloudflare/scripts/setup-tunnels.sh"
-          echo ""
-          echo "📖 Documentation: ./docs/"
-          echo "🔧 Configuration: .env (customize as needed)"
-          echo ""
-          echo "🎉 Ready for BrainSAIT LINC development with GitHub Copilot!"
-
-      - name: Run comprehensive health checks
-        run: |
-          echo "🔍 Running system health checks..."
+          chmod +x infra/cloudflare/setup-tunnels.sh
           
-          # Test Python environment
-          python -c "
-          try:
-              import fastapi, sqlalchemy, transformers, torch, openai, anthropic
-              print('✅ Core Python dependencies OK')
-          except ImportError as e:
-              print(f'❌ Python dependency error: {e}')
-              exit(1)
-          "
+          # Create DNS automation script
+          cat > infra/cloudflare/setup-dns.sh << 'EOF'
+          #!/bin/bash
           
-          # Test Node.js environment
-          if npx tailwindcss --help > /dev/null 2>&1; then
-              echo "✅ Tailwind CSS OK"
-          else
-              echo "❌ Tailwind CSS not available"
-              exit 1
-          fi
+          # BrainSAIT LINC DNS Records Setup
+          set -e
           
-          # Test database connectivity
-          if pg_isready -h postgres -p 5432 > /dev/null 2>&1; then
-              echo "✅ PostgreSQL connection OK"
-          else
-              echo "⚠️  PostgreSQL not immediately available (expected in CI)"
-          fi
-          
-          # Test Redis connectivity  
-          if redis-cli -h redis ping > /dev/null 2>&1; then
-              echo "✅ Redis connection OK"
-          else
-              echo "⚠️  Redis not immediately available (expected in CI)"
-          fi
-          
-          # Test file structure
-          if [ -d "agents" ] && [ -d "shared" ] && [ -d "infra" ]; then
-              echo "✅ Project structure OK"
-          else
-              echo "❌ Project structure incomplete"
-              exit 1
-          fi
-          
-          # Test configuration files
-          if [ -f "requirements.txt" ] && [ -f "package.json" ] && [ -f ".env" ]; then
-              echo "✅ Configuration files OK"
-          else
-              echo "❌ Configuration files missing"
-              exit 1
-          fi
-          
-          echo ""
-          echo "🎊 ALL HEALTH CHECKS PASSED!"
-          echo "   BrainSAIT LINC ecosystem is ready for development"
-          echo "   GitHub Copilot can now assist with building all 16 agents"
+          TUNNEL_NAME="brainsait-linc"
