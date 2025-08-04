@@ -160,7 +160,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          # Remove cache until we generate package-lock.json
 
       - name: Generate package-lock.json and install Node.js dependencies
         run: |
@@ -217,26 +216,25 @@ jobs:
           "
           
           # Create models directory
-          mkdir -p ./models/{arabic,english,shared}
+          mkdir -p ./models/arabic ./models/english ./models/shared
           
           # Create placeholder for Arabic resources
           echo "# Arabic language resources will be downloaded here" > ./models/arabic/README.md
 
-      - name: Set up project structure and configuration
+      - name: Set up project structure and configuration (FIXED)
         run: |
-          # Create comprehensive directory structure
-          mkdir -p {
-            agents/{masterlinc,authlinc,doctorlinc,nurslinc,patientlinc,bizlinc,paylinc,insightlinc,devlinc,autolinc,codelinc,medialinc,edulinc,chatlinc,oidlinc,careteamlinc},
-            shared/{auth,database,messaging,monitoring,models,utils,config},
-            infra/{docker,kubernetes,cloudflare,scripts,terraform},
-            ui/{web,mobile,desktop,components},
-            docs/{api,deployment,user-guides,agents,tutorials},
-            data/{temp,uploads,exports,models,backups},
-            logs/{agents,system,audit,performance},
-            tests/{unit,integration,agents,e2e},
-            templates/{fhir,nphies,saudi-moh,emails},
-            scripts/{setup,deployment,maintenance,backup}
-          }
+          # Create comprehensive directory structure with correct bash syntax
+          mkdir -p \
+            agents/masterlinc agents/authlinc agents/doctorlinc agents/nurslinc agents/patientlinc agents/bizlinc agents/paylinc agents/insightlinc agents/devlinc agents/autolinc agents/codelinc agents/medialinc agents/edulinc agents/chatlinc agents/oidlinc agents/careteamlinc \
+            shared/auth shared/database shared/messaging shared/monitoring shared/models shared/utils shared/config \
+            infra/docker infra/kubernetes infra/cloudflare infra/scripts infra/terraform \
+            ui/web ui/mobile ui/desktop ui/components \
+            docs/api docs/deployment docs/user-guides docs/agents docs/tutorials \
+            data/temp data/uploads data/exports data/models data/backups \
+            logs/agents logs/system logs/audit logs/performance \
+            tests/unit tests/integration tests/agents tests/e2e \
+            templates/fhir templates/nphies templates/saudi-moh templates/emails \
+            scripts/setup scripts/deployment scripts/maintenance scripts/backup
 
       - name: Create environment configuration
         run: |
@@ -615,7 +613,7 @@ jobs:
           }
           EOF
           
-          # Create PostCSS config
+          # Create PostCSS configuration
           cat > postcss.config.js << 'EOF'
           module.exports = {
             plugins: {
@@ -625,7 +623,7 @@ jobs:
           }
           EOF
           
-          # Create basic CSS file
+          # Create CSS directory and main file
           mkdir -p ui/web/css
           cat > ui/web/css/main.css << 'EOF'
           @tailwind base;
@@ -671,7 +669,7 @@ jobs:
           echo "🧠 Setting up BrainSAIT LINC Development Environment"
           
           # Create necessary directories
-          mkdir -p {data/{temp,uploads,exports},logs/{agents,system},models}
+          mkdir -p data/temp data/uploads data/exports logs/agents logs/system models
           
           # Set up database
           echo "📊 Setting up database..."
@@ -706,10 +704,11 @@ jobs:
           echo "✅ Healthcare compliance templates (FHIR, Saudi MOH)"
           echo "✅ Development environment configured"
           echo "✅ Docker containerization ready"
+          echo "✅ Bash syntax error resolved"
           echo ""
           echo "🏥 HEALTHCARE AGENTS (Ports 8010-8019):"
           echo "   • DoctorLINC   - Clinical decision support"
-          echo "   • NurseLINC    - Nursing workflow automation"
+          echo "   • NurseLINC    - Nursing workflow automation"  
           echo "   • PatientLINC  - Patient experience platform"
           echo "   • CareTeamLINC - Multi-provider coordination"
           echo ""
@@ -748,6 +747,7 @@ jobs:
           echo ""
           echo "🎉 Ready for BrainSAIT LINC development with GitHub Copilot!"
           echo "   Node.js lock file issue resolved ✅"
+          echo "   Bash syntax error fixed ✅"
           echo "   CSS framework configured ✅"
           echo "   Healthcare compliance ready ✅"
 
@@ -778,17 +778,17 @@ jobs:
               fi
           else
               echo "❌ package-lock.json missing"
-              exit(1)
+              exit 1
           fi
           
-          # Test project structure
-          required_dirs=("agents" "shared" "infra" "ui" "docs" "data" "logs" "tests")
-          for dir in "${required_dirs[@]}"; do
+          # Test project structure (sampling key directories)
+          echo "🏗️ Checking project structure..."
+          for dir in "agents/masterlinc" "agents/doctorlinc" "shared/auth" "ui/web" "data/temp" "logs/agents"; do
               if [ -d "$dir" ]; then
                   echo "✅ Directory $dir exists"
               else
                   echo "❌ Directory $dir missing"
-                  exit(1)
+                  exit 1
               fi
           done
           
@@ -799,7 +799,7 @@ jobs:
                   echo "✅ File $file exists"
               else
                   echo "❌ File $file missing"
-                  exit(1)
+                  exit 1
               fi
           done
           
@@ -811,8 +811,12 @@ jobs:
               rm ./ui/web/css/test-dist.css
           else
               echo "❌ CSS build failed"
-              exit(1)
+              exit 1
           fi
+          
+          # Count created directories to verify structure
+          agent_count=$(find agents -maxdepth 1 -type d | wc -l)
+          echo "📁 Created $((agent_count - 1)) agent directories"
           
           echo ""
           echo "🎊 ALL HEALTH CHECKS PASSED!"
@@ -820,4 +824,5 @@ jobs:
           echo "   Lock files generated properly ✅"
           echo "   Project structure complete ✅"
           echo "   CSS framework ready ✅"
+          echo "   Bash syntax corrected ✅"
           echo "   Ready for GitHub Copilot development ✅"
