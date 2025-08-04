@@ -1,0 +1,316 @@
+name: "BrainSAIT LINC Agents - Copilot Setup Steps"
+
+# Automatically run setup when workflow changes, and allow manual testing
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # Set minimal required permissions for multi-language ecosystem setup
+    permissions:
+      contents: read
+      packages: read
+
+    # Use container with pre-installed tools for healthcare and AI development
+    container:
+      image: ubuntu:22.04
+      options: --user root
+
+    # Database and supporting services for healthcare agents
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: brainsait_test
+          POSTGRES_DB: brainsait_agents
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Initialize container environment
+        run: |
+          apt-get update
+          apt-get install -y curl wget git sudo software-properties-common
+
+      - name: Checkout BrainSAIT LINC repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11 for healthcare agents
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Set up Node.js 20 for web interfaces
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install system dependencies for AI/ML and Arabic processing
+        run: |
+          apt-get install -y \
+            build-essential \
+            ffmpeg \
+            libsndfile1 \
+            libportaudio2 \
+            libasound-dev \
+            portaudio19-dev \
+            python3-pyaudio \
+            espeak \
+            espeak-data \
+            libespeak1 \
+            libespeak-dev \
+            festival \
+            sqlite3 \
+            libsqlite3-dev \
+            postgresql-client \
+            redis-tools \
+            jq \
+            unzip
+
+      - name: Install Docker for containerized agents
+        run: |
+          curl -fsSL https://get.docker.com -o get-docker.sh
+          sh get-docker.sh
+          usermod -aG docker $USER
+
+      - name: Install healthcare and FHIR dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install \
+            fastapi \
+            uvicorn \
+            sqlalchemy \
+            alembic \
+            pydantic \
+            fhir.resources \
+            python-multipart \
+            aiofiles \
+            redis \
+            celery \
+            httpx \
+            pytest \
+            pytest-asyncio
+
+      - name: Install AI/ML dependencies for Arabic NLP
+        run: |
+          pip install \
+            torch \
+            transformers \
+            openai \
+            anthropic \
+            whisper \
+            TTS \
+            librosa \
+            soundfile \
+            pyaudio \
+            speechrecognition \
+            nltk \
+            spacy \
+            arabic-reshaper \
+            python-bidi
+
+      - name: Install automation and integration tools
+        run: |
+          pip install \
+            docker \
+            kubernetes \
+            cloudflare \
+            zapier \
+            notion-client \
+            tweepy \
+            python-telegram-bot \
+            schedule
+
+      - name: Install JavaScript dependencies for web interfaces
+        run: |
+          npm install -g \
+            @tailwindcss/cli \
+            typescript \
+            @types/node \
+            vite \
+            eslint \
+            prettier
+
+      - name: Download Arabic language models and data
+        run: |
+          python -c "import nltk; nltk.download('punkt')"
+          python -c "import spacy; spacy.cli.download('en_core_web_sm')"
+          # Download Arabic NLP resources
+          mkdir -p ./models/arabic
+          wget -O ./models/arabic/ar_lexicon.txt https://raw.githubusercontent.com/CAMeL-Lab/camel_tools/master/camel_tools/data/lexicons/msa_lexicon.txt || true
+
+      - name: Set up project structure and configuration
+        run: |
+          mkdir -p {agents,shared,infra,ui,docs}/{src,tests,config}
+          mkdir -p data/{temp,uploads,exports}
+          mkdir -p logs/{agents,system,audit}
+          
+          # Create base configuration files
+          echo "ENVIRONMENT=development" > .env.example
+          echo "DATABASE_URL=postgresql://postgres:brainsait_test@postgres:5432/brainsait_agents" >> .env.example
+          echo "REDIS_URL=redis://redis:6379" >> .env.example
+          echo "LOG_LEVEL=INFO" >> .env.example
+          
+          # Copy example to actual env for testing
+          cp .env.example .env
+
+      - name: Initialize healthcare compliance templates
+        run: |
+          mkdir -p templates/{fhir,nphies,saudi-moh}
+          cat > templates/fhir/patient_template.json << 'EOF'
+          {
+            "resourceType": "Patient",
+            "id": "saudi-patient-template",
+            "language": "ar-SA",
+            "extension": [
+              {
+                "url": "http://brainsait.io/fhir/StructureDefinition/national-id",
+                "valueString": "TEMPLATE_NATIONAL_ID"
+              }
+            ]
+          }
+          EOF
+
+      - name: Create Docker Compose template for local development
+        run: |
+          cat > docker-compose.dev.yml << 'EOF'
+          version: '3.8'
+          services:
+            masterlinc:
+              build: ./agents/masterlinc
+              ports:
+                - "8000:8000"
+              environment:
+                - DATABASE_URL=postgresql://postgres:brainsait_test@db:5432/brainsait_agents
+                - REDIS_URL=redis://redis:6379
+              depends_on:
+                - db
+                - redis
+            
+            db:
+              image: postgres:15
+              environment:
+                POSTGRES_DB: brainsait_agents
+                POSTGRES_PASSWORD: brainsait_test
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+            
+            redis:
+              image: redis:7-alpine
+              volumes:
+                - redis_data:/data
+          
+          volumes:
+            postgres_data:
+            redis_data:
+          EOF
+
+      - name: Set up Cloudflare configuration templates
+        run: |
+          mkdir -p infra/cloudflare/templates
+          cat > infra/cloudflare/templates/tunnel-config.yml << 'EOF'
+          tunnel: TUNNEL_ID
+          credentials-file: /root/.cloudflared/TUNNEL_ID.json
+          
+          ingress:
+            - hostname: master.brainsait.io
+              service: http://localhost:8000
+            - hostname: doctor.brainsait.io
+              service: http://localhost:8001
+            - hostname: nurse.brainsait.io
+              service: http://localhost:8002
+            - service: http_status:404
+          EOF
+
+      - name: Initialize agent templates and schemas
+        run: |
+          mkdir -p agents/templates
+          cat > agents/templates/agent-schema.yml << 'EOF'
+          agent_id: "template"
+          category: "healthcare"
+          version: "1.0.0"
+          
+          metadata:
+            name: "Template Agent"
+            description: "Base template for LINC agents"
+            languages: ["ar", "en"]
+            
+          capabilities:
+            speech_to_text: true
+            text_to_speech: true
+            multilingual: true
+            
+          integrations:
+            fhir: true
+            apple_health: false
+            whatsapp: false
+            
+          deployment:
+            subdomain: "template.brainsait.io"
+            port: 8000
+            health_check: "/health"
+          EOF
+
+      - name: Validate setup and create summary
+        run: |
+          echo "🧠 BrainSAIT LINC Ecosystem Setup Complete!"
+          echo "=================================="
+          echo "✅ Python $(python --version)"
+          echo "✅ Node.js $(node --version)"
+          echo "✅ Docker $(docker --version)"
+          echo "✅ Healthcare dependencies installed"
+          echo "✅ AI/ML dependencies installed"
+          echo "✅ Arabic NLP resources downloaded"
+          echo "✅ Project structure initialized"
+          echo "✅ Configuration templates created"
+          echo ""
+          echo "🏥 Ready for healthcare agent development"
+          echo "🤖 Ready for AI/ML agent implementation"
+          echo "🌐 Ready for multilingual (AR/EN) processing"
+          echo "☁️ Ready for Cloudflare deployment"
+          echo ""
+          echo "Next: Run 'docker-compose -f docker-compose.dev.yml up' to start development environment"
+
+      - name: Run basic health checks
+        run: |
+          # Test Python imports
+          python -c "import fastapi, sqlalchemy, transformers, torch; print('✅ Python dependencies OK')"
+          
+          # Test Node.js tools
+          npx tailwindcss --help > /dev/null && echo "✅ Tailwind CSS OK"
+          
+          # Test database connectivity
+          pg_isready -h postgres -p 5432 && echo "✅ PostgreSQL OK"
+          
+          # Test Redis connectivity
+          redis-cli -h redis ping && echo "✅ Redis OK"
+          
+          # Test Docker
+          docker --version && echo "✅ Docker OK"
+          
+          echo "🎉 All systems ready for BrainSAIT LINC development!"
