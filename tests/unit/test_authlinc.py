@@ -93,14 +93,25 @@ def test_invalid_login(client):
     response = client.post("/auth/login", json=login_data)
     assert response.status_code == 401
 
-def test_duplicate_registration(client, test_user_data):
+def test_duplicate_registration(client):
     """Test registration with duplicate username/email"""
+    import time
+    timestamp = int(time.time())
+    
+    test_data = {
+        "username": f"duplicate_{timestamp}",
+        "email": f"duplicate_{timestamp}@example.com",
+        "password": "testpassword123",
+        "full_name": "Duplicate User",
+        "role": "patient"
+    }
+    
     # Register user first time
-    response1 = client.post("/auth/register", json=test_user_data)
+    response1 = client.post("/auth/register", json=test_data)
     assert response1.status_code == 200
     
-    # Try to register again
-    response2 = client.post("/auth/register", json=test_user_data)
+    # Try to register again with same data
+    response2 = client.post("/auth/register", json=test_data)
     assert response2.status_code == 400
 
 def test_token_verification(client, test_user_data):
