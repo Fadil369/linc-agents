@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Arabic RTL Support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* BrainSAIT Custom Components */
+.agent-card {
+  @apply bg-white rounded-lg shadow-md p-6 border border-gray-200;
+}
+
+.agent-card:hover {
+  @apply shadow-lg border-brainsait-blue;
+}
+
+.arabic-text {
+  font-family: 'Noto Sans Arabic', Arial, sans-serif;
+  direction: rtl;
+}
+
+.healthcare-badge {
+  @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs;
+}
+
+.business-badge {
+  @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs;
+}
+
+.automation-badge {
+  @apply bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs;
+}

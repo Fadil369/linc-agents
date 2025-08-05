@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainSAIT LINC - Healthcare AI Platform</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .rtl { direction: rtl; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div x-data="lincApp()" x-cloak>
+        <!-- Navigation -->
+        <nav class="bg-blue-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-bold">🧠 BrainSAIT LINC</h1>
+                        <span class="ml-2 text-blue-300">Healthcare AI Platform</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- Language Toggle -->
+                        <button @click="toggleLanguage()" 
+                                class="px-3 py-1 bg-blue-700 rounded-md hover:bg-blue-600 transition">
+                            <span x-text="language === 'en' ? 'العربية' : 'English'"></span>
+                        </button>
+                        
+                        <!-- User Menu -->
+                        <div x-show="user" class="relative">
+                            <button @click="showUserMenu = !showUserMenu" 
+                                    class="flex items-center space-x-2 hover:bg-blue-700 px-3 py-1 rounded-md">
+                                <span x-text="user?.full_name || 'User'"></span>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                </svg>
+                            </button>
+                            <div x-show="showUserMenu" @click.away="showUserMenu = false"
+                                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                                <a href="#" @click="logout()" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Login Button -->
+                        <button x-show="!user" @click="showLogin = true"
+                                class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-md transition">
+                            Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <!-- Welcome Section -->
+            <div x-show="!user" class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4" x-text="t('welcome')"></h2>
+                <p class="text-xl text-gray-600 mb-8" x-text="t('description')"></p>
+                <button @click="showLogin = true" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition">
+                    <span x-text="t('getStarted')"></span>
+                </button>
+            </div>
+
+            <!-- Agent Grid -->
+            <div x-show="user" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                <template x-for="agent in availableAgents" :key="agent.name">
+                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition cursor-pointer"
+                         @click="selectAgent(agent)">
+                        <div class="text-3xl mb-3" x-text="agent.icon"></div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2" x-text="agent.title"></h3>
+                        <p class="text-sm text-gray-600 mb-3" x-text="agent.description"></p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs px-2 py-1 rounded-full"
+                                  :class="agent.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                  x-text="agent.status"></span>
+                            <span class="text-xs text-gray-500" x-text="agent.type"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Chat Interface -->
+            <div x-show="selectedAgent && user" class="bg-white rounded-lg shadow-lg">
+                <div class="border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-3" x-text="selectedAgent?.icon"></span>
+                            <div>
+                                <h3 class="text-lg font-semibold" x-text="selectedAgent?.title"></h3>
+                                <p class="text-sm text-gray-600" x-text="selectedAgent?.description"></p>
+                            </div>
+                        </div>
+                        <button @click="selectedAgent = null" 
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Messages -->
+                <div class="h-96 overflow-y-auto p-6 space-y-4" id="chat-messages">
+                    <template x-for="message in messages" :key="message.id">
+                        <div class="flex" :class="message.sender === 'user' ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg"
+                                 :class="message.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'">
+                                <p x-text="message.content"></p>
+                                <p class="text-xs mt-1 opacity-75" x-text="formatTime(message.timestamp)"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- Message Input -->
+                <div class="border-t border-gray-200 px-6 py-4">
+                    <div class="flex space-x-3">
+                        <input type="text" x-model="messageInput" @keyup.enter="sendMessage()"
+                               :placeholder="t('typeMessage')"
+                               class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button @click="sendMessage()" :disabled="!messageInput.trim()"
+                                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md transition">
+                            <span x-text="t('send')"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Login Modal -->
+        <div x-show="showLogin" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+             @click="showLogin = false">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4" @click.stop>
+                <h2 class="text-2xl font-bold mb-6" x-text="t('login')"></h2>
+                <form @submit.prevent="login()">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" x-text="t('username')"></label>
+                        <input type="text" x-model="loginForm.username" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" x-text="t('password')"></label>
+                        <input type="password" x-model="loginForm.password" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button type="submit" :disabled="isLoading"
+                                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition">
+                            <span x-text="isLoading ? t('loading') : t('login')"></span>
+                        </button>
+                        <button type="button" @click="showLogin = false"
+                                class="text-gray-600 hover:text-gray-800 transition">
+                            <span x-text="t('cancel')"></span>
+                        </button>
+                    </div>
+                </form>
+                <div x-show="loginError" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    <span x-text="loginError"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function lincApp() {
+            return {
+                language: 'en',
+                user: null,
+                showLogin: false,
+                showUserMenu: false,
+                selectedAgent: null,
+                messages: [],
+                messageInput: '',
+                isLoading: false,
+                loginError: '',
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                
+                availableAgents: [
+                    {
+                        name: 'doctorlinc',
+                        title: 'DoctorLINC',
+                        description: 'Physician assistant for clinical support',
+                        icon: '👨‍⚕️',
+                        type: 'Healthcare',
+                        status: 'online'
+                    },
+                    {
+                        name: 'nurslinc',
+                        title: 'NurseLINC',
+                        description: 'Nursing workflow automation',
+                        icon: '👩‍⚕️',
+                        type: 'Healthcare',
+                        status: 'online'
+                    },
+                    {
+                        name: 'patientlinc',
+                        title: 'PatientLINC',
+                        description: 'Patient experience navigator',
+                        icon: '🏥',
+                        type: 'Healthcare',
+                        status: 'online'
+                    },
+                    {
+                        name: 'chatlinc',
+                        title: 'ChatLINC',
+                        description: 'Multilingual communication hub',
+                        icon: '💬',
+                        type: 'Communication',
+                        status: 'online'
+                    },
+                    {
+                        name: 'bizlinc',
+                        title: 'BizLINC',
+                        description: 'Healthcare business intelligence',
+                        icon: '📊',
+                        type: 'Business',
+                        status: 'online'
+                    },
+                    {
+                        name: 'paylinc',
+                        title: 'PayLINC',
+                        description: 'Payment processing and billing',
+                        icon: '💳',
+                        type: 'Business',
+                        status: 'online'
+                    }
+                ],
+
+                translations: {
+                    en: {
+                        welcome: 'Welcome to BrainSAIT LINC',
+                        description: 'AI-powered healthcare platform for Saudi Arabia',
+                        getStarted: 'Get Started',
+                        login: 'Login',
+                        username: 'Username',
+                        password: 'Password',
+                        cancel: 'Cancel',
+                        loading: 'Loading...',
+                        typeMessage: 'Type your message...',
+                        send: 'Send'
+                    },
+                    ar: {
+                        welcome: 'مرحباً بك في برين سايت لينك',
+                        description: 'منصة الرعاية الصحية المدعومة بالذكاء الاصطناعي للمملكة العربية السعودية',
+                        getStarted: 'ابدأ الآن',
+                        login: 'تسجيل الدخول',
+                        username: 'اسم المستخدم',
+                        password: 'كلمة المرور',
+                        cancel: 'إلغاء',
+                        loading: 'جاري التحميل...',
+                        typeMessage: 'اكتب رسالتك...',
+                        send: 'إرسال'
+                    }
+                },
+
+                init() {
+                    // Check for existing token
+                    const token = localStorage.getItem('linc_token');
+                    if (token) {
+                        this.verifyToken(token);
+                    }
+                },
+
+                t(key) {
+                    return this.translations[this.language][key] || key;
+                },
+
+                toggleLanguage() {
+                    this.language = this.language === 'en' ? 'ar' : 'en';
+                    document.dir = this.language === 'ar' ? 'rtl' : 'ltr';
+                    document.body.className = this.language === 'ar' ? 'rtl' : '';
+                },
+
+                async login() {
+                    this.isLoading = true;
+                    this.loginError = '';
+                    
+                    try {
+                        const response = await fetch('http://localhost:8001/auth/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                username: this.loginForm.username,
+                                password: this.loginForm.password,
+                                agent_name: 'web'
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.user = data.user;
+                            localStorage.setItem('linc_token', data.access_token);
+                            this.showLogin = false;
+                            this.loginForm = { username: '', password: '' };
+                        } else {
+                            const error = await response.json();
+                            this.loginError = error.detail || 'Login failed';
+                        }
+                    } catch (error) {
+                        this.loginError = 'Connection error. Please check if the services are running.';
+                        console.error('Login error:', error);
+                    }
+                    
+                    this.isLoading = false;
+                },
+
+                async verifyToken(token) {
+                    try {
+                        const response = await fetch('http://localhost:8001/auth/verify-token', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                            }
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.valid) {
+                                const userResponse = await fetch('http://localhost:8001/auth/me', {
+                                    headers: {
+                                        'Authorization': `Bearer ${token}`
+                                    }
+                                });
+                                if (userResponse.ok) {
+                                    this.user = await userResponse.json();
+                                }
+                            }
+                        } else {
+                            localStorage.removeItem('linc_token');
+                        }
+                    } catch (error) {
+                        console.error('Token verification error:', error);
+                        localStorage.removeItem('linc_token');
+                    }
+                },
+
+                logout() {
+                    this.user = null;
+                    this.selectedAgent = null;
+                    this.messages = [];
+                    localStorage.removeItem('linc_token');
+                    this.showUserMenu = false;
+                },
+
+                selectAgent(agent) {
+                    this.selectedAgent = agent;
+                    this.messages = [
+                        {
+                            id: 1,
+                            sender: 'agent',
+                            content: `Hello! I'm ${agent.title}. How can I help you today?`,
+                            timestamp: new Date()
+                        }
+                    ];
+                },
+
+                async sendMessage() {
+                    if (!this.messageInput.trim() || !this.selectedAgent) return;
+
+                    const userMessage = {
+                        id: Date.now(),
+                        sender: 'user',
+                        content: this.messageInput,
+                        timestamp: new Date()
+                    };
+
+                    this.messages.push(userMessage);
+                    const input = this.messageInput;
+                    this.messageInput = '';
+
+                    // Simulate agent response
+                    setTimeout(() => {
+                        const agentResponse = {
+                            id: Date.now() + 1,
+                            sender: 'agent',
+                            content: `I understand you said: "${input}". I'm processing your request...`,
+                            timestamp: new Date()
+                        };
+                        this.messages.push(agentResponse);
+                    }, 1000);
+                },
+
+                formatTime(timestamp) {
+                    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            };
+        }
+    </script>
+</body>
+</html>

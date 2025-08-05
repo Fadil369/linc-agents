@@ -1,0 +1,73 @@
+# BrainSAIT LINC Agent Configuration Schema
+# This schema defines the structure for all LINC agents
+
+agent_id: "template"
+category: "healthcare"  # healthcare | business | automation | content | security
+version: "1.0.0"
+
+metadata:
+  name: "Template LINC Agent"
+  name_ar: "وكيل لينك النموذجي"
+  description: "Base template for all LINC agents"
+  description_ar: "القالب الأساسي لجميع وكلاء لينك"
+  author: "BrainSAIT Team"
+  languages: ["ar", "en"]
+  
+capabilities:
+  # Core Features
+  chat: true
+  voice_input: false
+  voice_output: false
+  multilingual: true
+  
+  # Integration Features
+  fhir_integration: false
+  database_access: true
+  api_integration: true
+  file_processing: false
+  
+  # Advanced Features
+  ai_processing: true
+  workflow_automation: false
+  real_time_updates: false
+  
+configuration:
+  # API Endpoints
+  endpoints:
+    health: "/health"
+    chat: "/api/v1/chat"
+    process: "/api/v1/process"
+    status: "/api/v1/status"
+  
+  # Deployment Settings
+  deployment:
+    subdomain: "template.brainsait.io"
+    port: 8000
+    health_check_path: "/health"
+    docker_image: "brainsait/template-linc"
+    
+  # Resource Requirements
+  resources:
+    cpu_limit: "1000m"
+    memory_limit: "1Gi"
+    storage_size: "10Gi"
+  
+  # Dependencies
+  dependencies:
+    internal_agents: []
+    external_apis: ["openai"]
+    databases: ["postgres", "redis"]
+    
+# Monitoring and Observability
+monitoring:
+  metrics_enabled: true
+  logging_level: "INFO"
+  health_checks: true
+  performance_tracking: true
+  
+# Security Configuration
+security:
+  authentication_required: true
+  rate_limiting: true
+  encryption_at_rest: true
+  audit_logging: true
