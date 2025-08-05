@@ -12,7 +12,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -31,11 +30,11 @@ services:
       timeout: 5s
       retries: 5
   
-  # Core Orchestration Agent
+  # Core Infrastructure Agents
   masterlinc:
     build: 
-      context: ./agents/masterlinc
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: agents/masterlinc/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -49,15 +48,14 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./agents/masterlinc:/app
-      - ./shared:/app/shared
       - ./data:/app/data
       - ./logs:/app/logs
     restart: unless-stopped
   
-  # Authentication Service
   authlinc:
-    build: ./agents/authlinc
+    build: 
+      context: .
+      dockerfile: agents/authlinc/Dockerfile
     ports:
       - "8001:8001"
     environment:
@@ -66,7 +64,39 @@ services:
       - MASTER_LINC_URL=http://masterlinc:8000
       - JWT_SECRET=dev_jwt_secret_change_in_production
     depends_on:
+      - postgres
+      - redis
       - masterlinc
+    restart: unless-stopped
+
+  # Healthcare Domain Agents
+  doctorlinc:
+    build: 
+      context: .
+      dockerfile: agents/doctorlinc/Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      - DATABASE_URL=postgresql://postgres:brainsait_test@postgres:5432/brainsait_agents
+      - REDIS_URL=redis://redis:6379/2
+      - AUTH_LINC_URL=http://authlinc:8001
+      - MASTER_LINC_URL=http://masterlinc:8000
+    depends_on:
+      - postgres
+      - redis
+      - authlinc
+    restart: unless-stopped
+
+  # Web Interface
+  web:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./ui/web:/usr/share/nginx/html:ro
+    depends_on:
+      - masterlinc
+      - authlinc
     restart: unless-stopped
 
 volumes:
