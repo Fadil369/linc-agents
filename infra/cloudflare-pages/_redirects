@@ -1,0 +1,13 @@
+# Cloudflare Pages redirects and rewrites
+
+# Redirect old URLs to new structure
+/docs/* /documentation/:splat 301
+
+# API routes to backend services
+/api/v1/* https://api.brainsait.io/:splat 200
+
+# Healthcare endpoints
+/fhir/* https://fhir.brainsait.io/:splat 200
+
+# Single Page Application fallback
+/* /index.html 200

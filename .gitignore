@@ -129,3 +129,10 @@ data/backups/*
 !data/backups/.gitkeep
 models/downloads/*
 !models/downloads/.gitkeep
+
+# Cloudflare Workers (explicitly excluded)
+wrangler.toml
+_worker.js
+worker.js
+*.worker.js
+.wrangler/

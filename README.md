@@ -101,7 +101,16 @@ docker-compose up -d
 
 # Using Kubernetes
 kubectl apply -k infra/kubernetes/
+
+# Deploy web interface to Cloudflare Pages
+npm run build
+wrangler pages deploy dist/
+
+# Or use the deployment script
+npm run deploy:pages
 ```
+
+> **Note**: This project uses **Cloudflare Pages only** for web hosting. Cloudflare Workers integration has been intentionally excluded to simplify deployment and focus on static site hosting with Pages Functions.
 
 ## 📁 Project Structure
 
@@ -129,6 +138,7 @@ linc-agents/
 ├── infra/                      # Infrastructure as Code
 │   ├── docker/                # Docker configurations
 │   ├── kubernetes/            # Kubernetes manifests
+│   ├── cloudflare-pages/      # Cloudflare Pages deployment
 │   ├── terraform/             # Terraform configurations
 │   └── scripts/               # Deployment scripts
 ├── ui/                         # Web interfaces

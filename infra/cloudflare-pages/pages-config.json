@@ -1,0 +1,48 @@
+{
+  "name": "brainsait-linc-agents",
+  "compatibility_date": "2024-01-01",
+  "build": {
+    "command": "npm run build",
+    "destination": "dist/web"
+  },
+  "deployment": {
+    "project_name": "brainsait-linc",
+    "production_branch": "main",
+    "preview_branch": "*"
+  },
+  "routes": [
+    {
+      "include": "/*"
+    }
+  ],
+  "redirects": [
+    {
+      "from": "/docs/*",
+      "to": "/documentation/:splat",
+      "status": 301
+    }
+  ],
+  "headers": [
+    {
+      "source": "/**/*",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options", 
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "directory": "functions",
+    "compatibility_date": "2024-01-01"
+  }
+}

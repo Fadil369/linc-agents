@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx,ts,tsx",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "deploy:pages": "./scripts/deploy-pages.sh"
   },
   "dependencies": {
     "alpinejs": "^3.13.0",
