@@ -2,9 +2,10 @@ Security Policy
 ## Supported Versions
 We regularly maintain and update the main branch. Please ensure you are using the latest release for security updates and bug fixes.
 
-Version	Supported
-main	✔️
-others	❌
+| Version | Supported |
+| ------- | --------- |
+| main    | ✔️        |
+| others  | ❌        |
 Reporting a Vulnerability
 If you discover a security vulnerability in this repository, please follow these steps:
 
