@@ -1,0 +1,21 @@
+name = "brainsait-linc-web"
+compatibility_date = "2024-01-01"
+
+[build]
+command = "npm run build"
+cwd = "."
+destination = "dist/web"
+
+[env.production.vars]
+NODE_ENV = "production"
+
+[env.preview.vars]
+NODE_ENV = "preview"
+
+[[env.production.routes]]
+pattern = "*.brainsait.io/*"
+zone_id = ""
+
+[[env.preview.routes]]
+pattern = "preview.brainsait.io/*"
+zone_id = ""

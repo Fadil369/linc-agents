@@ -2,33 +2,326 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+}
+
 /* Arabic RTL Support */
 [dir="rtl"] {
   text-align: right;
-}
-
-/* BrainSAIT Custom Components */
-.agent-card {
-  @apply bg-white rounded-lg shadow-md p-6 border border-gray-200;
-}
-
-.agent-card:hover {
-  @apply shadow-lg border-brainsait-blue;
+  font-family: 'Arabic UI Text', 'Geeza Pro', 'Baghdad', 'Al Nile', sans-serif;
 }
 
 .arabic-text {
-  font-family: 'Noto Sans Arabic', Arial, sans-serif;
+  font-family: 'Arabic UI Text', 'Geeza Pro', 'Baghdad', 'Al Nile', sans-serif;
   direction: rtl;
 }
 
+/* Custom Components */
+.agent-card {
+  @apply bg-white rounded-xl shadow-sm p-4 border border-gray-200 transition-all duration-200;
+}
+
+.agent-card:hover {
+  @apply shadow-md border-blue-300 bg-blue-50/30;
+  transform: translateY(-1px);
+}
+
+/* Gradient backgrounds */
+.gradient-healthcare {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.gradient-business {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.gradient-development {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.gradient-infrastructure {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* Status indicators */
+.status-online {
+  @apply bg-green-400;
+  animation: pulse-green 2s infinite;
+}
+
+.status-offline {
+  @apply bg-red-400;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Chat interface styles */
+.chat-container {
+  height: calc(100vh - 12rem);
+}
+
+.messages-container {
+  scroll-behavior: smooth;
+}
+
+.message-bubble {
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.message-user {
+  @apply bg-blue-500 text-white ml-auto;
+  border-radius: 18px 18px 4px 18px;
+}
+
+.message-agent {
+  @apply bg-gray-100 text-gray-800 mr-auto;
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* Loading animation */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #9ca3af;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0; }
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Custom badges */
 .healthcare-badge {
-  @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs;
+  @apply bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium;
 }
 
 .business-badge {
-  @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs;
+  @apply bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium;
 }
 
 .automation-badge {
-  @apply bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs;
+  @apply bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-medium;
+}
+
+.infrastructure-badge {
+  @apply bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Glass morphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Interactive elements */
+.interactive-card {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.interactive-card:active {
+  transform: translateY(0);
+}
+
+/* Status indicators with animation */
+.status-indicator {
+  position: relative;
+  display: inline-block;
+}
+
+.status-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.status-online::after {
+  background-color: rgb(74, 222, 128);
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .message-bubble {
+    max-width: 85%;
+  }
+  
+  .chat-container {
+    height: calc(100vh - 10rem);
+  }
+}
+
+/* Dark mode support (for future enhancement) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    @apply bg-gray-900 text-white;
+  }
+  
+  .dark-mode .agent-card {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .dark-mode .message-agent {
+    @apply bg-gray-700 text-gray-200;
+  }
+}
+
+/* Focus styles for accessibility */
+button:focus,
+input:focus,
+select:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .agent-card {
+    border-width: 2px;
+    border-color: #000;
+  }
+  
+  .status-online {
+    background-color: #00ff00;
+  }
+  
+  .status-offline {
+    background-color: #ff0000;
+  }
 }
