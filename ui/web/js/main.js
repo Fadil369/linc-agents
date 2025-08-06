@@ -248,8 +248,11 @@ function app() {
         },
 
         async getAgentResponse(message) {
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+            // Simulated network delay for demo/development purposes.
+            // In production, replace this with an actual API call to your backend agent service.
+            if (typeof window !== 'undefined' && window.NODE_ENV !== 'production') {
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+            }
 
             // Generate contextual responses based on agent type and message
             const responses = this.generateAgentResponse(message);
