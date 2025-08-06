@@ -18,16 +18,16 @@ Potential impact
 Suggested remediation, if possible
 We will respond within 5 business days and work with you to resolve the issue promptly.
 
-Security Best Practices
+## Security Best Practices
 No hardcoded secrets: All credentials and sensitive information must be stored in environment variables (.env).
 Dependencies: We use Dependabot for automated dependency updates.
 Code review: All code is reviewed for security risks, especially access control and data handling.
 Data protection: Sensitive data is encrypted when stored or transmitted.
 FastAPI: Security middleware and authentication (e.g., OAuth2) are enabled for all APIs.
-Disclosure Policy
+## Disclosure Policy
 Please report vulnerabilities privately as described above.
 We will acknowledge your report and keep you informed of progress.
 Once resolved, users will be notified via release notes.
-Additional Resources
+## Additional Resources
 CONTRIBUTING.md
 GitHub Security Advisories
