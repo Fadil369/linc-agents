@@ -165,12 +165,11 @@ function app() {
                 
                 for (const agent of this.agents) {
                     try {
-                        // Simulate health check - in production, uncomment the real check
-                        // const response = await fetch(`http://localhost:${agent.port}/health`);
-                        // agent.status = response.ok ? 'online' : 'offline';
+                        // Perform real health check
+                        const response = await fetch(`http://localhost:${agent.port}/health`);
+                        agent.status = response.ok ? 'online' : 'offline';
                         
-                        // For demo, randomly set some agents as online/offline
-                        agent.status = Math.random() > 0.1 ? 'online' : 'offline';
+                        // Removed demo random assignment. If you need to simulate, document clearly and ensure not used in production.
                         if (agent.status === 'online') healthyCount++;
                     } catch (error) {
                         agent.status = 'offline';
